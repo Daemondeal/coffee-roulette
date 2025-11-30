@@ -37,7 +37,7 @@ def home():
             WHERE result = ?
         """, (p["id"],)).fetchone()[0]
 
-        pickrate = (wins / count * 100) if total_extractions > 0 else 0
+        pickrate = (wins / count * 100) if count > 0 else 0
 
         person_stats.append({
             "name": p["name"],
