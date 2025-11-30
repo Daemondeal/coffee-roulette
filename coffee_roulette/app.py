@@ -11,7 +11,7 @@ def create_app():
     app.secret_key = os.getenv("SECRET_KEY")
     return app
 
-def main(run_app):
+def main(run_app=False):
     init_db()
     load_dotenv()
     app = create_app()
