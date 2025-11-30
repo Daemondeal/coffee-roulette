@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from flask import Flask
 from coffee_roulette.db import init_db
 from coffee_roulette.routes import bp
@@ -7,7 +8,9 @@ from dotenv import load_dotenv
 load_dotenv()  # Load environment variables early
 
 def create_app():
-    app = Flask(__name__, template_folder="../templates")
+    template_path = Path(__file__).parent.parent / "templates"
+
+    app = Flask(__name__, template_folder=template_path)
     app.register_blueprint(bp)
     app.secret_key = os.getenv("SECRET_KEY", "dev_secret_key")  # fallback for dev
     return app

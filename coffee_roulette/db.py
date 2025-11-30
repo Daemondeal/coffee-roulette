@@ -14,7 +14,9 @@ def get_connection():
 def init_db():
     conn = get_connection()
 
-    with open("schema.sql", "r") as f:
+    schema_path = Path(__file__).parent.parent / "schema.sql"
+
+    with open(schema_path, "r") as f:
         conn.executescript(f.read())
 
     conn.close()
