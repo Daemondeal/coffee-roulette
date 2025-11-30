@@ -1,0 +1,21 @@
+[project]
+name = "coffee-roulette"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dotenv>=0.9.9",
+    "flask>=3.1.2",
+]
+
+[project.scripts]
+run-app = "coffee_roulette:app.main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["coffee_roulette"]
+
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+

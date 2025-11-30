@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>New Extraction</h2>
+
+<form method="POST" class="mt-3">
+
+    <!-- Participants -->
+    <div class="mb-3">
+        <label class="form-label">Participants</label>
+        <div class="card p-3">
+            {% for p in people %}
+            <div class="form-check">
+                <input class="form-check-input participant-checkbox" type="checkbox" name="participants" value="{{ p.id }}" id="person{{ p.id }}">
+                <label class="form-check-label" for="person{{ p.id }}">{{ p.name }}</label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Winner (radio buttons) -->
+    <div class="mb-3 mt-3">
+        <label class="form-label">Who got selected?</label>
+        <div class="card p-3">
+            {% for p in people %}
+            <div class="form-check">
+                <input class="form-check-input winner-radio" type="radio" name="result" value="{{ p.id }}" id="winner{{ p.id }}" disabled required>
+                <label class="form-check-label" for="winner{{ p.id }}">{{ p.name }}</label>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="mb-3 mt-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+    </div>
+
+    <button class="btn btn-success">Save Extraction</button>
+</form>
+
+<!-- JS to enable winner radio only for selected participants -->
+<script>
+    const participantCheckboxes = document.querySelectorAll('.participant-checkbox');
+    const winnerRadios = document.querySelectorAll('.winner-radio');
+
+    function updateWinnerRadios() {
+        const selectedIds = Array.from(participantCheckboxes)
+                                .filter(cb => cb.checked)
+                                .map(cb => cb.value);
+
+        winnerRadios.forEach(radio => {
+            if (selectedIds.includes(radio.value)) {
+                radio.disabled = false;
+            } else {
+                radio.disabled = true;
+                radio.checked = false; // uncheck if disabled
+            }
+        });
+    }
+
+    participantCheckboxes.forEach(cb => cb.addEventListener('change', updateWinnerRadios));
+</script>
+
+{% endblock %}
