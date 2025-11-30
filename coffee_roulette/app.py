@@ -5,7 +5,7 @@ from coffee_roulette.db import init_db
 from coffee_roulette.routes import bp
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables early
+load_dotenv(Path(__file__).parent.parent / ".env")  # Load environment variables early
 
 def create_app():
     template_path = Path(__file__).parent.parent / "templates"
