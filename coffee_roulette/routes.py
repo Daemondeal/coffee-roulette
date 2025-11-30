@@ -128,6 +128,11 @@ def add_extraction():
 
 @bp.route("/extractions/delete/<int:extraction_id>", methods=["POST"])
 def delete_extraction(extraction_id):
+    password = request.form.get("password")
+    if not check_password(password):
+        flash("Invalid Password", "danger")
+        return redirect("/")
+
     conn = get_connection()
 
     # delete participants first (FK clean-up)
