@@ -1,25 +1,21 @@
-from socket import gethostname 
 import os
 from flask import Flask
 from coffee_roulette.db import init_db
 from coffee_roulette.routes import bp
 from dotenv import load_dotenv
 
+load_dotenv()  # Load environment variables early
+
 def create_app():
     app = Flask(__name__, template_folder="../templates")
     app.register_blueprint(bp)
-    app.secret_key = os.getenv("SECRET_KEY")
+    app.secret_key = os.getenv("SECRET_KEY", "dev_secret_key")  # fallback for dev
     return app
 
-def main(run_app=False):
-    init_db()
-    load_dotenv()
+# Initialize DB separately (so WSGI can call it without running app)
+init_db()
+
+def main():
     app = create_app()
-    if run_app:
-        app.run()
-
-
-if __name__ == "__main__":
-    run_app = 'liveconsole' not in gethostname()
-    main(run_app)
+    app.run(debug=True)
 
