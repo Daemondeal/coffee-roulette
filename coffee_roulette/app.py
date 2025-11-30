@@ -14,4 +14,4 @@ def main():
     init_db()
     load_dotenv()
     app = create_app()
-    app.run(debug=True)
+    app.run()
