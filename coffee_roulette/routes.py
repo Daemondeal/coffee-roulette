@@ -7,6 +7,8 @@ bp = Blueprint("main", __name__)
 def check_password(password):
     return password == os.getenv("PASSWORD", "")
 
+COFFEE_PRICE_CENTS = 60
+
 # Home
 @bp.route("/")
 def home():
@@ -20,9 +22,6 @@ def home():
         "SELECT * FROM extractions ORDER BY id DESC"
     ).fetchall()
 
-    # Compute pickrates
-    total_extractions = conn.execute("SELECT COUNT(*) FROM extractions").fetchone()[0]
-
     person_stats = []
     for p in people:
         count = conn.execute("""
@@ -31,20 +30,27 @@ def home():
             WHERE person_id = ?
         """, (p["id"],)).fetchone()[0]
 
+        total_persons_paid = conn.execute("""
+            SELECT COUNT(*)
+            FROM extractions e
+            JOIN extraction_participants ep ON e.id = ep.extraction_id
+            WHERE result = ?
+        """, (p["id"],)).fetchone()[0]
+
         wins = conn.execute("""
             SELECT COUNT(*)
             FROM extractions
             WHERE result = ?
         """, (p["id"],)).fetchone()[0]
 
-        pickrate = (wins / count * 100) if count > 0 else 0
-
         person_stats.append({
             "name": p["name"],
             "count": count,
-            "pickrate": round(pickrate, 1)
+            "wins": wins,
+            "total_amount": total_persons_paid * COFFEE_PRICE_CENTS,
         })
 
+    person_stats.sort(key=lambda x: x["total_amount"], reverse=True)
     # Build extraction list with participants
     extraction_data = []
     for ext in extractions:
@@ -67,6 +73,7 @@ def home():
             "timestamp": ext["timestamp"],
             "participants": [p["name"] for p in participants],
             "winner": winner,
+            "total_amount": len(participants) * COFFEE_PRICE_CENTS
         })
 
     conn.close()

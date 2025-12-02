@@ -17,22 +17,28 @@
 <div class="row">
     <!-- People list with pickrates -->
     <div class="col-md-5">
-        <h3>People</h3>
+        <h3 class="mb-3">Leaderboard</h3>
         <ul class="list-group mb-4">
             {% for p in people %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>{{ p.name }}</span>
-                <span class="badge bg-primary rounded-pill">
-                    {{ p.pickrate }}% ({{ p.count }})
-                </span>
+            {% set amount = p.total_amount / 100 %}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                <div>
+                    <strong class="fs-5">{{ loop.index }}. {{ p.name }}</strong>
+                    <div class="text-muted small">picked {{ p.wins }} times</div>
+                </div>
+
+                <div class="text-end">
+                    <span class="fw-bold fs-5">{{ amount }}€</span>
+                </div>
             </li>
             {% endfor %}
         </ul>
-        <a href="/people/add" class="btn btn-sm btn-dark">Add Person</a>
+
+<a href="/people/add" class="btn btn-sm btn-dark">Add Person</a>
     </div>
 
     <!-- Extractions -->
-    <div class="col-md-7">
+    <div class="col-md-7 mt-md-0 mt-3">
         <h3>Recent Extractions</h3>
         <ul class="list-group">
             {% for e in extractions %}
@@ -41,6 +47,7 @@
                     <div>
                         <h5 class="mb-1">{{ e.winner.name }}</h5>
                         <small class="text-muted">{{ e.timestamp }}</small><br>
+                        <small class="text-muted">Paid {{ e.total_amount / 100 }}€</small><br>
                         <strong>Participants:</strong> {{ ", ".join(e.participants) }}
                     </div>
 
