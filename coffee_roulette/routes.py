@@ -22,6 +22,10 @@ def home():
         "SELECT * FROM extractions ORDER BY id DESC"
     ).fetchall()
 
+    total_coffees = conn.execute(
+        "SELECT COUNT(*) FROM extraction_participants"
+    ).fetchone()[0]
+
     person_stats = []
     for p in people:
         count = conn.execute("""
@@ -43,14 +47,24 @@ def home():
             WHERE result = ?
         """, (p["id"],)).fetchone()[0]
 
+        participations_total = conn.execute("""
+            SELECT COUNT(*)
+            FROM extraction_participants ep
+            WHERE ep.person_id = ?
+        """, (p["id"],)).fetchone()[0]
+
+        net_amount = total_persons_paid - participations_total
+
         person_stats.append({
             "name": p["name"],
             "count": count,
             "wins": wins,
-            "total_amount": total_persons_paid * COFFEE_PRICE_CENTS,
+            "paid_coffees": total_persons_paid,
+            "net_amount": net_amount * COFFEE_PRICE_CENTS,
+            "free_coffees": participations_total - wins,
         })
 
-    person_stats.sort(key=lambda x: x["total_amount"], reverse=True)
+    person_stats.sort(key=lambda x: x["net_amount"], reverse=True)
     # Build extraction list with participants
     extraction_data = []
     for ext in extractions:
@@ -80,6 +94,7 @@ def home():
 
     return render_template(
         "index.html",
+        total_coffees=total_coffees * COFFEE_PRICE_CENTS,
         people=person_stats,
         extractions=extraction_data
     )
