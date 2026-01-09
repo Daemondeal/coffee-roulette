@@ -117,6 +117,44 @@ def add_person():
         return redirect("/")
     return render_template("add_person.html")
 
+
+@bp.route("/people/delete", methods=["GET", "POST"])
+def delete_person():
+    if request.method == "POST":
+        person_id = request.form["person_id"]
+        password = request.form.get("password")
+
+        if not check_password(password):
+            flash("Invalid Password", "danger")
+            return redirect("/people/delete")
+
+        conn = get_connection()
+
+        participation_count = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM extraction_participants
+            WHERE person_id = ?
+            """,
+            (person_id,)
+        ).fetchone()[0]
+
+        if participation_count > 0:
+            conn.close()
+            flash("Cannot delete person: they participated in at least one extraction.", "warning")
+            return redirect("/people/delete")
+
+        conn.execute("DELETE FROM people WHERE id = ?", (person_id,))
+        conn.commit()
+        conn.close()
+        return redirect("/")
+
+    conn = get_connection()
+    people = conn.execute("SELECT id, name FROM people").fetchall()
+    conn.close()
+
+    return render_template("delete_person.html", people=people)
+
 @bp.route("/extractions/add", methods=["GET", "POST"])
 def add_extraction():
     conn = get_connection()
