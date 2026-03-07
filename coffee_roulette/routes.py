@@ -1,103 +1,97 @@
 import os
-from flask import Blueprint, flash, render_template, request, redirect, abort
+import datetime
+
+from flask import Blueprint, flash, render_template, request, redirect
 from coffee_roulette.db import get_connection
+from coffee_roulette.model import get_all_extractions, get_all_people
 
 bp = Blueprint("main", __name__)
 
-def check_password(password):
+
+def check_password(password: str) -> bool:
     return password == os.getenv("PASSWORD", "")
 
-COFFEE_PRICE_CENTS = 60
+
+def get_coffe_price_cents(when: datetime.datetime) -> int:
+    # TODO: Check this
+    if when >= datetime.datetime(2026, 2, 26):
+        return 65
+    else:
+        return 60
+
 
 # Home
 @bp.route("/")
 def home():
     conn = get_connection()
 
-    # Fetch all people
-    people = conn.execute("SELECT id, name FROM people ORDER BY name").fetchall()
+    people = get_all_people(conn)
+    extractions = get_all_extractions(conn, people)
 
-    # Fetch extractions
-    extractions = conn.execute(
-        "SELECT * FROM extractions ORDER BY id DESC"
-    ).fetchall()
+    total_spent_on_coffee = 0
+    for extraction in extractions:
+        coffee_price = get_coffe_price_cents(extraction.date)
+        total_spent_on_coffee += len(extraction.participants) * coffee_price
 
-    total_coffees = conn.execute(
-        "SELECT COUNT(*) FROM extraction_participants"
-    ).fetchone()[0]
+    people_stats = []
+    for id in people:
+        person = people[id]
 
-    person_stats = []
-    for p in people:
-        count = conn.execute("""
-            SELECT COUNT(*)
-            FROM extraction_participants
-            WHERE person_id = ?
-        """, (p["id"],)).fetchone()[0]
+        free_coffees = 0
+        coffees_paid_to_others = 0
+        net_balance = 0
+        losses = 0
 
-        total_persons_paid = conn.execute("""
-            SELECT COUNT(*)
-            FROM extractions e
-            JOIN extraction_participants ep ON e.id = ep.extraction_id
-            WHERE result = ?
-        """, (p["id"],)).fetchone()[0]
+        for extraction in extractions:
+            if id not in extraction.participants_id:
+                continue
 
-        wins = conn.execute("""
-            SELECT COUNT(*)
-            FROM extractions
-            WHERE result = ?
-        """, (p["id"],)).fetchone()[0]
+            was_extracted = extraction.extracted.id == id
 
-        participations_total = conn.execute("""
-            SELECT COUNT(*)
-            FROM extraction_participants ep
-            WHERE ep.person_id = ?
-        """, (p["id"],)).fetchone()[0]
+            if was_extracted:
+                coffees_paid_to_others += len(extraction.participants) - 1
+                net_balance += get_coffe_price_cents(extraction.date) * (
+                    len(extraction.participants) - 1
+                )
+                losses += 1
+            else:
+                free_coffees += 1
+                net_balance -= get_coffe_price_cents(extraction.date)
 
-        net_amount = total_persons_paid - participations_total
+        people_stats.append(
+            {
+                "name": person.name,
+                "net_balance": net_balance,
+                "coffees_paid_to_others": coffees_paid_to_others,
+                "losses": losses,
+                "free_coffees": free_coffees,
+            }
+        )
 
-        person_stats.append({
-            "name": p["name"],
-            "count": count,
-            "wins": wins,
-            "paid_coffees": total_persons_paid,
-            "net_amount": net_amount * COFFEE_PRICE_CENTS,
-            "free_coffees": participations_total - wins,
-        })
+    extraction_stats = []
+    for extraction in extractions:
+        extraction_stats.append(
+            {
+                "participants": [p.name for p in extraction.participants],
+                "date": extraction.date,
+                "extracted": extraction.extracted,
+                "amount_paid_cents": len(extraction.participants)
+                * get_coffe_price_cents(extraction.date),
+            }
+        )
 
-    person_stats.sort(key=lambda x: x["net_amount"], reverse=True)
-    # Build extraction list with participants
-    extraction_data = []
-    for ext in extractions:
-        participants = conn.execute("""
-            SELECT people.name
-            FROM people
-            JOIN extraction_participants ep ON ep.person_id = people.id
-            WHERE ep.extraction_id = ?
-        """, (ext["id"],)).fetchall()
-
-        winner = conn.execute("""
-            SELECT people.name
-            FROM people
-            WHERE people.id = ?
-        """, (ext["result"],)).fetchone()
-
-        extraction_data.append({
-            "id": ext["id"],
-            "result": ext["result"],
-            "timestamp": ext["timestamp"],
-            "participants": [p["name"] for p in participants],
-            "winner": winner,
-            "total_amount": len(participants) * COFFEE_PRICE_CENTS
-        })
+    people_stats.sort(key=lambda x: x["net_balance"], reverse=True)
+    extraction_stats.sort(key=lambda ex: ex["date"], reverse=True)
 
     conn.close()
 
     return render_template(
         "index.html",
-        total_coffees=total_coffees * COFFEE_PRICE_CENTS,
-        people=person_stats,
-        extractions=extraction_data
+        total_spent_on_coffee=total_spent_on_coffee,
+        people=people_stats,
+        extractions=extraction_stats,
     )
+
 
 # Add person
 @bp.route("/people/add", methods=["GET", "POST"])
@@ -111,7 +105,7 @@ def add_person():
             return redirect("/")
 
         conn = get_connection()
-        conn.execute("INSERT INTO people (name) VALUES (?)", (name,))
+        res = conn.execute("INSERT INTO people (name) VALUES (?)", (name.strip(),))
         conn.commit()
         conn.close()
         return redirect("/")
@@ -136,12 +130,15 @@ def delete_person():
             FROM extraction_participants
             WHERE person_id = ?
             """,
-            (person_id,)
+            (person_id,),
         ).fetchone()[0]
 
         if participation_count > 0:
             conn.close()
-            flash("Cannot delete person: they participated in at least one extraction.", "warning")
+            flash(
+                "Cannot delete person: they participated in at least one extraction.",
+                "warning",
+            )
             return redirect("/people/delete")
 
         conn.execute("DELETE FROM people WHERE id = ?", (person_id,))
@@ -155,6 +152,7 @@ def delete_person():
 
     return render_template("delete_person.html", people=people)
 
+
 @bp.route("/extractions/add", methods=["GET", "POST"])
 def add_extraction():
     conn = get_connection()
@@ -167,13 +165,15 @@ def add_extraction():
             return redirect("/")
 
         cur = conn.cursor()
-        cur.execute("INSERT INTO extractions (result) VALUES (?)", (selected_person_id,))
+        cur.execute(
+            "INSERT INTO extractions (result) VALUES (?)", (selected_person_id,)
+        )
         extraction_id = cur.lastrowid
 
         for p in participants:
             cur.execute(
                 "INSERT INTO extraction_participants (extraction_id, person_id) VALUES (?, ?)",
-                (extraction_id, p)
+                (extraction_id, p),
             )
 
         conn.commit()
@@ -186,6 +186,7 @@ def add_extraction():
 
     return render_template("add_extraction.html", people=people)
 
+
 @bp.route("/extractions/delete/<int:extraction_id>", methods=["POST"])
 def delete_extraction(extraction_id):
     password = request.form.get("password")
@@ -196,7 +197,9 @@ def delete_extraction(extraction_id):
     conn = get_connection()
 
     # delete participants first (FK clean-up)
-    conn.execute("DELETE FROM extraction_participants WHERE extraction_id = ?", (extraction_id,))
+    conn.execute(
+        "DELETE FROM extraction_participants WHERE extraction_id = ?", (extraction_id,)
+    )
     conn.execute("DELETE FROM extractions WHERE id = ?", (extraction_id,))
 
     conn.commit()
