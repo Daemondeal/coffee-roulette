@@ -73,6 +73,7 @@ def home():
     for extraction in extractions:
         extraction_stats.append(
             {
+                "id": extraction.id,
                 "participants": [p.name for p in extraction.participants],
                 "date": extraction.date,
                 "extracted": extraction.extracted,

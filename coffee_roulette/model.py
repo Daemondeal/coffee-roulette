@@ -11,6 +11,7 @@ class Person:
 
 @dataclass
 class Extraction:
+    id: int
     participants: list[Person]
     participants_id: set[int]
     extracted: Person
@@ -58,6 +59,7 @@ def get_all_extractions(
             timestamp = row["timestamp"]
 
             extractions[extraction_id] = Extraction(
+                id=extraction_id,
                 participants=[],
                 participants_id=set(),
                 extracted=people[result_id],
