@@ -2,6 +2,7 @@ import os
 import datetime
 
 from flask import Blueprint, flash, render_template, request, redirect
+from coffee_roulette import utils
 from coffee_roulette.db import get_connection
 from coffee_roulette.model import get_all_extractions, get_all_people
 
@@ -164,11 +165,27 @@ def add_extraction():
             flash("Invalid Password", "danger")
             return redirect("/")
 
+        assert selected_person_id
+
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO extractions (result) VALUES (?)", (selected_person_id,)
         )
         extraction_id = cur.lastrowid
+
+        participant_names = []
+        for p in participants:
+            participant = conn.execute(
+                "SELECT name FROM people WHERE id = ?",
+                (p,),
+            ).fetchone()
+            participant_names.append(participant["name"])
+
+        extracted = conn.execute(
+            "SELECT name FROM people WHERE id = ?",
+            (selected_person_id,),
+        ).fetchone()
+        extracted_name = extracted["name"]
 
         for p in participants:
             cur.execute(
@@ -176,7 +193,30 @@ def add_extraction():
                 (extraction_id, p),
             )
 
+        people = get_all_people(conn)
+        extractions = get_all_extractions(conn, people)
+        extracted_net_spend = 0
+        for extraction in extractions:
+            if int(selected_person_id) not in extraction.participants_id:
+                continue
+
+            if extraction.extracted.id == int(selected_person_id):
+                extracted_net_spend += get_coffe_price_cents(extraction.date) * (
+                    len(extraction.participants) - 1
+                )
+            else:
+                extracted_net_spend -= get_coffe_price_cents(extraction.date)
+
         conn.commit()
+
+        message = ":loud-siren: NEW COFFEE EXTRACTION :loud-siren:\n"
+        message += f"{extracted_name} just paid for this many coffees: "
+        for _ in range(len(participant_names)):
+            message += ":coffee: "
+        message += f"\nHis new net balance is now: {extracted_net_spend/100:.2f} €"
+
+        utils.send_slack_message(message)
+
         conn.close()
         return redirect("/")
 
