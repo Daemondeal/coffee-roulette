@@ -1,3 +1,4 @@
+import os
 import sqlite3
 
 from pathlib import Path
@@ -12,7 +13,14 @@ def get_connection():
     return conn
 
 def init_db():
+    global PATH_DB
+
+    custom_db_path = os.getenv("PATH_DB", "")
+    if custom_db_path != "":
+        PATH_DB = Path(custom_db_path)
+
     conn = get_connection()
+
 
     schema_path = Path(__file__).parent.parent / "schema.sql"
 
