@@ -214,7 +214,7 @@ def add_extraction():
         message += f"{extracted_name} just paid for this many coffees: "
         for _ in range(len(participant_names)):
             message += ":coffee: "
-        message += f"\nHis new net balance is now: {extracted_net_spend/100:.2f} €"
+        message += f"\nTheir new net balance is now: {extracted_net_spend/100:.2f} €"
 
         utils.send_slack_message(message)
 
