@@ -210,7 +210,7 @@ def add_extraction():
 
         conn.commit()
 
-        message = ":loud-siren: NEW COFFEE EXTRACTION :loud-siren:\n"
+        message = ":pepo_coffee: NEW COFFEE EXTRACTION :meow_coffee:\n"
         message += f"{extracted_name} just paid for this many coffees: "
         for _ in range(len(participant_names)):
             message += ":coffee: "
