@@ -15,6 +15,12 @@ def create_app():
     app.register_blueprint(bp)
     app.secret_key = os.getenv("SECRET_KEY", "dev_secret_key")  # fallback for dev
     app.permanent_session_lifetime = datetime.timedelta(days=30)
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE=os.getenv("SESSION_COOKIE_SAMESITE", "Lax"),
+        SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "true").lower()
+        in {"1", "true", "yes", "on"},
+    )
     return app
 
 # Initialize DB separately (so WSGI can call it without running app)
