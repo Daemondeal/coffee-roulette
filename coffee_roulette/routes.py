@@ -1,8 +1,8 @@
 import os
 import datetime
 
-from flask import Blueprint, flash, render_template, request, redirect
-from coffee_roulette import utils
+from flask import Blueprint, flash, render_template, request, redirect, send_file
+from coffee_roulette import db, utils
 from coffee_roulette.db import get_connection
 from coffee_roulette.model import get_all_extractions, get_all_people
 
@@ -19,6 +19,30 @@ def get_coffe_price_cents(when: datetime.datetime) -> int:
         return 65
     else:
         return 60
+
+
+@bp.route("/download", methods=["GET", "POST"])
+def download_database():
+    if request.method == "POST":
+        password = request.form.get("password")
+
+        if not check_password(password):
+            flash("Invalid Password", "danger")
+            return redirect("/download")
+
+        database_path = db.PATH_DB.resolve()
+        if not database_path.is_file():
+            flash("Database not found", "warning")
+            return redirect("/download")
+
+        return send_file(
+            database_path,
+            as_attachment=True,
+            download_name="coffee-roulette.db",
+            mimetype="application/octet-stream",
+        )
+
+    return render_template("download.html")
 
 
 # Home

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Download Database</h2>
+
+<form method="POST" class="mt-3">
+    <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input name="password" type="password" class="form-control" required>
+    </div>
+
+    <button class="btn btn-primary">Download</button>
+</form>
+{% endblock content %}
