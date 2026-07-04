@@ -8,9 +8,10 @@
     <!-- Participants -->
     <div class="mb-3">
         <label class="form-label">Participants</label>
+        <input type="search" class="form-control mb-2" id="participant-search" placeholder="Search people">
         <div class="card p-3">
             {% for p in people %}
-            <div class="form-check">
+            <div class="form-check participant-row" data-person-name="{{ p.name | lower }}">
                 <input class="form-check-input participant-checkbox" type="checkbox" name="participants" value="{{ p.id }}" id="person{{ p.id }}">
                 <label class="form-check-label" for="person{{ p.id }}">{{ p.name }}</label>
             </div>
@@ -41,8 +42,18 @@
 
 <!-- JS to enable winner radio only for selected participants -->
 <script>
+    const participantSearch = document.querySelector('#participant-search');
+    const participantRows = document.querySelectorAll('.participant-row');
     const participantCheckboxes = document.querySelectorAll('.participant-checkbox');
     const winnerRadios = document.querySelectorAll('.winner-radio');
+
+    function filterParticipants() {
+        const query = participantSearch.value.trim().toLowerCase();
+
+        participantRows.forEach(row => {
+            row.hidden = !row.dataset.personName.includes(query);
+        });
+    }
 
     function updateWinnerRadios() {
         const selectedIds = Array.from(participantCheckboxes)
@@ -59,6 +70,7 @@
         });
     }
 
+    participantSearch.addEventListener('input', filterParticipants);
     participantCheckboxes.forEach(cb => cb.addEventListener('change', updateWinnerRadios));
 </script>
 

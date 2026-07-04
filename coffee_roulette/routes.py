@@ -268,8 +268,27 @@ def add_extraction():
         conn.close()
         return redirect("/")
 
-    # GET → show form
-    people = conn.execute("SELECT id, name FROM people").fetchall()
+    # GET -> show form
+    people = conn.execute(
+        """
+        SELECT
+            p.id,
+            p.name,
+            MAX(e.timestamp) AS last_participated_at,
+            COUNT(ep.extraction_id) AS participation_count
+        FROM people p
+        LEFT JOIN extraction_participants ep
+            ON ep.person_id = p.id
+        LEFT JOIN extractions e
+            ON e.id = ep.extraction_id
+        GROUP BY p.id, p.name
+        ORDER BY
+            last_participated_at IS NULL,
+            last_participated_at DESC,
+            participation_count DESC,
+            p.name COLLATE NOCASE
+        """
+    ).fetchall()
     conn.close()
 
     return render_template("add_extraction.html", people=people)
