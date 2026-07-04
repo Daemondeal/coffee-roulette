@@ -99,7 +99,7 @@ def home():
     leaderboard_options = [
         {
             "key": "net_balance",
-            "label": "Net expense",
+            "label": "Money Lost",
             "stat_key": "net_balance",
         },
         {
