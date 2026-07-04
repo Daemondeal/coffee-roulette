@@ -28,6 +28,42 @@ def home():
 
     people = get_all_people(conn)
     extractions = get_all_extractions(conn, people)
+    leaderboard_options = [
+        {
+            "key": "net_balance",
+            "label": "Net expense",
+            "stat_key": "net_balance",
+        },
+        {
+            "key": "participations",
+            "label": "Participations",
+            "stat_key": "participations",
+        },
+        {
+            "key": "paid",
+            "label": "Coffees paid",
+            "stat_key": "coffees_paid_to_others",
+        },
+        {
+            "key": "free",
+            "label": "Free coffees",
+            "stat_key": "free_coffees",
+        },
+        {
+            "key": "losses",
+            "label": "Times lost",
+            "stat_key": "losses",
+        },
+    ]
+    selected_leaderboard = request.args.get("leaderboard", "net_balance")
+    leaderboard_option = next(
+        (
+            option
+            for option in leaderboard_options
+            if option["key"] == selected_leaderboard
+        ),
+        leaderboard_options[0],
+    )
 
     total_spent_on_coffee = 0
     for extraction in extractions:
@@ -42,11 +78,13 @@ def home():
         coffees_paid_to_others = 0
         net_balance = 0
         losses = 0
+        participations = 0
 
         for extraction in extractions:
             if id not in extraction.participants_id:
                 continue
 
+            participations += 1
             was_extracted = extraction.extracted.id == id
 
             if was_extracted:
@@ -67,8 +105,16 @@ def home():
                 "coffees_paid_to_others": coffees_paid_to_others,
                 "losses": losses,
                 "free_coffees": free_coffees,
+                "participations": participations,
             }
         )
+
+    for person_stat in people_stats:
+        value = person_stat[leaderboard_option["stat_key"]]
+        if leaderboard_option["key"] == "net_balance":
+            person_stat["leaderboard_value"] = f"{value / 100:.2f}€"
+        else:
+            person_stat["leaderboard_value"] = value
 
     extraction_stats = []
     for extraction in extractions:
@@ -83,7 +129,8 @@ def home():
             }
         )
 
-    people_stats.sort(key=lambda x: x["net_balance"], reverse=True)
+    people_stats.sort(key=lambda x: x["name"].lower())
+    people_stats.sort(key=lambda x: x[leaderboard_option["stat_key"]], reverse=True)
     extraction_stats.sort(key=lambda ex: ex["date"], reverse=True)
 
     conn.close()
@@ -92,6 +139,9 @@ def home():
         "index.html",
         total_spent_on_coffee=total_spent_on_coffee,
         people=people_stats,
+        leaderboard_options=leaderboard_options,
+        selected_leaderboard=leaderboard_option["key"],
+        selected_leaderboard_label=leaderboard_option["label"],
         extractions=extraction_stats,
     )
 
@@ -261,7 +311,7 @@ def add_extraction():
         message += f"{extracted_name} just paid for this many coffees: "
         for _ in range(len(participant_names)):
             message += ":coffee: "
-        message += f"\nTheir new net balance is now: {extracted_net_spend/100:.2f} €"
+        message += f"\nTheir new net expense is now: {extracted_net_spend/100:.2f} €"
 
         utils.send_slack_message(message)
 

@@ -13,7 +13,18 @@
     <!-- People list with pickrates -->
     <div class="col-md-5 mt-3">
 
-        <h3 class="mb-3">Leaderboard</h3>
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+            <h3 class="mb-0">Leaderboard</h3>
+            <form method="GET">
+                <select name="leaderboard" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for option in leaderboard_options %}
+                    <option value="{{ option.key }}" {% if option.key == selected_leaderboard %}selected{% endif %}>
+                        {{ option.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <ul class="list-group mb-4">
             {% for p in people %}
             <li class="list-group-item d-flex justify-content-between align-items-center py-3">
@@ -24,7 +35,8 @@
                 </div>
 
                 <div class="text-end">
-                    <span class="fw-bold fs-5">{{ p.net_balance / 100 }}€</span>
+                    <span class="fw-bold fs-5">{{ p.leaderboard_value }}</span>
+                    <div class="text-muted small">{{ selected_leaderboard_label }}</div>
                 </div>
             </li>
             {% endfor %}
