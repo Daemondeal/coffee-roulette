@@ -1,5 +1,6 @@
-# Coffee Roulette tracker
+# Coffee Roulette
 
-Coffee roulette tracker, only really meant for personal use.
+Website for tracking Coffee Roulette standings, mostly for personal use.
 
-Very vibe coded
+Somewhat vibe coded.
+
