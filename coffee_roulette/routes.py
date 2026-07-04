@@ -61,6 +61,7 @@ def home():
 
         people_stats.append(
             {
+                "id": person.id,
                 "name": person.name,
                 "net_balance": net_balance,
                 "coffees_paid_to_others": coffees_paid_to_others,
@@ -112,6 +113,52 @@ def add_person():
         conn.close()
         return redirect("/")
     return render_template("add_person.html")
+
+
+@bp.route("/people/edit", methods=["GET", "POST"])
+def edit_person():
+    conn = get_connection()
+
+    if request.method == "POST":
+        person_id = request.form["person_id"]
+        name = request.form["name"].strip()
+        password = request.form.get("password")
+
+        if not check_password(password):
+            conn.close()
+            flash("Invalid Password", "danger")
+            return redirect(f"/people/edit?person_id={person_id}")
+
+        if not name:
+            conn.close()
+            flash("Name is required", "warning")
+            return redirect(f"/people/edit?person_id={person_id}")
+
+        conn.execute("UPDATE people SET name = ? WHERE id = ?", (name, person_id))
+        conn.commit()
+        conn.close()
+
+        flash("Person updated", "success")
+        return redirect("/")
+
+    selected_person_id = request.args.get("person_id")
+    selected_person = None
+    if selected_person_id:
+        selected_person = conn.execute(
+            "SELECT id, name FROM people WHERE id = ?",
+            (selected_person_id,),
+        ).fetchone()
+        if selected_person is None:
+            flash("Person not found", "warning")
+
+    people = conn.execute("SELECT id, name FROM people ORDER BY name").fetchall()
+    conn.close()
+
+    return render_template(
+        "edit_person.html",
+        people=people,
+        selected_person=selected_person,
+    )
 
 
 @bp.route("/people/delete", methods=["GET", "POST"])

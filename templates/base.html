@@ -16,10 +16,24 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container">
     <a class="navbar-brand" href="/">Coffee Roulette</a>
-    <div class="navbar-nav">
-      <a class="nav-link" href="/people/add">Add Person</a>
-      <a class="nav-link" href="/people/delete">Delete Person</a>
-      <a class="nav-link" href="/extractions/add">New Extraction</a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#mainNav"
+      aria-controls="mainNav"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="mainNav">
+      <div class="navbar-nav">
+        <a class="nav-link" href="/extractions/add">New Extraction</a>
+        <a class="nav-link" href="/people/add">Add Person</a>
+        <a class="nav-link" href="/people/edit">Edit Person</a>
+        <a class="nav-link" href="/people/delete">Delete Person</a>
+      </div>
     </div>
   </div>
 </nav>
