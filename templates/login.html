@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Log in</h2>
+
+<form method="POST" action="/login?next={{ next_url | urlencode }}" class="mt-3">
+    <div class="mb-3">
+        <label class="form-label">Password</label>
+        <input name="password" type="password" class="form-control" required autofocus>
+    </div>
+
+    <button class="btn btn-primary">Log in</button>
+</form>
+{% endblock content %}

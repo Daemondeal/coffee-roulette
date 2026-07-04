@@ -58,6 +58,7 @@
                         <strong>Participants:</strong> {{ ", ".join(e.participants) }}
                     </div>
 
+                    {% if session.get("logged_in") %}
                     <!-- Delete button triggers modal -->
                     <button
                         class="btn btn-sm btn-outline-danger"
@@ -66,8 +67,10 @@
                     >
                         Delete
                     </button>
+                    {% endif %}
                 </div>
 
+                {% if session.get("logged_in") %}
                 <!-- Modal -->
                 <div class="modal fade" id="deleteModal{{ e.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ e.id }}" aria-hidden="true">
                   <div class="modal-dialog modal-dialog-centered">
@@ -82,9 +85,6 @@
                         <br><br>
                         <strong>{{ e.extracted.name }}</strong><br>
                         <small>{{ e.date }}</small>
-                        <br> <br>
-                        <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control">
                       </div>
                       <div class="modal-footer">
                         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -96,6 +96,7 @@
                     </div>
                   </div>
                 </div>
+                {% endif %}
             </li>
             {% endfor %}
         </ul>

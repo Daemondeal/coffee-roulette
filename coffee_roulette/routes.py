@@ -1,7 +1,9 @@
 import os
 import datetime
+from functools import wraps
+from urllib.parse import urlencode
 
-from flask import Blueprint, flash, render_template, request, redirect, send_file
+from flask import Blueprint, flash, render_template, request, redirect, send_file, session
 from coffee_roulette import db, utils
 from coffee_roulette.db import get_connection
 from coffee_roulette.model import get_all_extractions, get_all_people
@@ -13,6 +15,23 @@ def check_password(password: str) -> bool:
     return password == os.getenv("PASSWORD", "")
 
 
+def is_logged_in() -> bool:
+    return session.get("logged_in", False)
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if is_logged_in():
+            return view(*args, **kwargs)
+
+        flash("Please log in first", "warning")
+        next_url = request.full_path.rstrip("?") if request.method == "GET" else "/"
+        return redirect(f"/login?{urlencode({'next': next_url})}")
+
+    return wrapped_view
+
+
 def get_coffe_price_cents(when: datetime.datetime) -> int:
     # TODO: Check this
     if when >= datetime.datetime(2026, 2, 26):
@@ -22,14 +41,9 @@ def get_coffe_price_cents(when: datetime.datetime) -> int:
 
 
 @bp.route("/download", methods=["GET", "POST"])
+@login_required
 def download_database():
     if request.method == "POST":
-        password = request.form.get("password")
-
-        if not check_password(password):
-            flash("Invalid Password", "danger")
-            return redirect("/download")
-
         database_path = db.PATH_DB.resolve()
         if not database_path.is_file():
             flash("Database not found", "warning")
@@ -43,6 +57,36 @@ def download_database():
         )
 
     return render_template("download.html")
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    next_url = request.args.get("next") or "/"
+    if not next_url.startswith("/") or next_url.startswith("//"):
+        next_url = "/"
+
+    if is_logged_in():
+        return redirect(next_url)
+
+    if request.method == "POST":
+        password = request.form.get("password")
+        if not check_password(password):
+            flash("Invalid Password", "danger")
+            return redirect(f"/login?{urlencode({'next': next_url})}")
+
+        session.permanent = True
+        session["logged_in"] = True
+        flash("Logged in", "success")
+        return redirect(next_url)
+
+    return render_template("login.html", next_url=next_url)
+
+
+@bp.route("/logout", methods=["POST"])
+def logout():
+    session.pop("logged_in", None)
+    flash("Logged out", "success")
+    return redirect("/")
 
 
 # Home
@@ -172,14 +216,10 @@ def home():
 
 # Add person
 @bp.route("/people/add", methods=["GET", "POST"])
+@login_required
 def add_person():
     if request.method == "POST":
         name = request.form["name"]
-        password = request.form.get("password")
-
-        if not check_password(password):
-            flash("Invalid Password", "danger")
-            return redirect("/")
 
         conn = get_connection()
         res = conn.execute("INSERT INTO people (name) VALUES (?)", (name.strip(),))
@@ -190,18 +230,13 @@ def add_person():
 
 
 @bp.route("/people/edit", methods=["GET", "POST"])
+@login_required
 def edit_person():
     conn = get_connection()
 
     if request.method == "POST":
         person_id = request.form["person_id"]
         name = request.form["name"].strip()
-        password = request.form.get("password")
-
-        if not check_password(password):
-            conn.close()
-            flash("Invalid Password", "danger")
-            return redirect(f"/people/edit?person_id={person_id}")
 
         if not name:
             conn.close()
@@ -236,14 +271,10 @@ def edit_person():
 
 
 @bp.route("/people/delete", methods=["GET", "POST"])
+@login_required
 def delete_person():
     if request.method == "POST":
         person_id = request.form["person_id"]
-        password = request.form.get("password")
-
-        if not check_password(password):
-            flash("Invalid Password", "danger")
-            return redirect("/people/delete")
 
         conn = get_connection()
 
@@ -277,15 +308,12 @@ def delete_person():
 
 
 @bp.route("/extractions/add", methods=["GET", "POST"])
+@login_required
 def add_extraction():
     conn = get_connection()
     if request.method == "POST":
         selected_person_id = request.form.get("result")  # radio button selection
         participants = request.form.getlist("participants")  # checkboxes
-        password = request.form.get("password")
-        if not check_password(password):
-            flash("Invalid Password", "danger")
-            return redirect("/")
 
         assert selected_person_id
 
@@ -369,12 +397,8 @@ def add_extraction():
 
 
 @bp.route("/extractions/delete/<int:extraction_id>", methods=["POST"])
+@login_required
 def delete_extraction(extraction_id):
-    password = request.form.get("password")
-    if not check_password(password):
-        flash("Invalid Password", "danger")
-        return redirect("/")
-
     conn = get_connection()
 
     # delete participants first (FK clean-up)
