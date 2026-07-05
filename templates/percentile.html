@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<h2>Show Percentiles</h2>
+
+<form method="GET" class="mt-3 mb-4">
+    <div class="mb-3">
+        <label class="form-label">Person</label>
+        <select name="person_id" class="form-control" required>
+            <option value="">Choose a person</option>
+            {% for person in people %}
+            <option value="{{ person.id }}" {% if selected_person and selected_person.id == person.id %}selected{% endif %}>
+                {{ person.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button class="btn btn-secondary">Show</button>
+</form>
+
+{% if selected_person %}
+<h3>
+    {{ selected_person.name  }}
+</h3>
+
+<div style="max-width:700px;">
+  <p style="font-size:15px;margin:0 0 10px;">Money lost: <b id="valOut"></b> — <b id="pctOut"></b></p>
+  <div style="position:relative;height:260px;">
+    <canvas id="chart"></canvas>
+  </div>
+</div>
+<script>
+(function(){
+  const sorted = {{ selected_person_percentile | tojson }};
+  const min = sorted[0], max = sorted[sorted.length-1];
+  const bins = 25, width = (max-min)/bins;
+  const counts = new Array(bins).fill(0);
+  sorted.forEach(v => counts[Math.min(bins-1, Math.floor((v-min)/width))]++);
+  const labels = counts.map((_,i) => (min + (i+0.5)*width).toFixed(0));
+
+  const current = {{ selected_person_value | tojson }};
+
+  function percentile(v){
+    let lo=0, hi=sorted.length;
+    while(lo<hi){ const m=(lo+hi)>>1; if(sorted[m]<=v) lo=m+1; else hi=m; }
+    return Math.round(lo/sorted.length*100);
+  }
+  function ordinal(n){ const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+  function updateText(){
+    document.getElementById('valOut').textContent = current.toFixed(1);
+    document.getElementById('pctOut').textContent = ordinal(percentile(current))+' percentile';
+  }
+  const markerLine = {
+    id: 'markerLine',
+    afterDraw(c){
+      const x = c.scales.x, y = c.scales.y;
+      const frac = (current - min) / (max - min);
+      const px = x.left + frac * (x.right - x.left);
+      const ctx = c.ctx;
+      ctx.save();
+      ctx.strokeStyle = '#111';
+      ctx.setLineDash([4,3]);
+      ctx.beginPath();
+      ctx.moveTo(px, y.top);
+      ctx.lineTo(px, y.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+  const chart = new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: counts,
+        borderColor: '#2a78d6',
+        backgroundColor: 'rgba(42,120,214,0.12)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+        y: { grid: { color: '#eee' } }
+      }
+    },
+    plugins: [markerLine]
+  });
+
+  updateText();
+})();
+</script>
+
+{% endif %}
+{% endblock %}

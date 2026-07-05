@@ -7,6 +7,7 @@ from flask import Blueprint, flash, render_template, request, redirect, send_fil
 from coffee_roulette import db, utils
 from coffee_roulette.db import get_connection
 from coffee_roulette.model import get_all_extractions, get_all_people
+from coffee_roulette.stats import calculate_leaderboard, calculate_percentiles, calculate_stats_for_person
 
 bp = Blueprint("main", __name__)
 
@@ -138,44 +139,7 @@ def home():
         coffee_price = get_coffe_price_cents(extraction.date)
         total_spent_on_coffee += len(extraction.participants) * coffee_price
 
-    people_stats = []
-    for id in people:
-        person = people[id]
-
-        free_coffees = 0
-        coffees_paid_to_others = 0
-        net_balance = 0
-        losses = 0
-        participations = 0
-
-        for extraction in extractions:
-            if id not in extraction.participants_id:
-                continue
-
-            participations += 1
-            was_extracted = extraction.extracted.id == id
-
-            if was_extracted:
-                coffees_paid_to_others += len(extraction.participants) - 1
-                net_balance += get_coffe_price_cents(extraction.date) * (
-                    len(extraction.participants) - 1
-                )
-                losses += 1
-            else:
-                free_coffees += 1
-                net_balance -= get_coffe_price_cents(extraction.date)
-
-        people_stats.append(
-            {
-                "id": person.id,
-                "name": person.name,
-                "net_balance": net_balance,
-                "coffees_paid_to_others": coffees_paid_to_others,
-                "losses": losses,
-                "free_coffees": free_coffees,
-                "participations": participations,
-            }
-        )
+    people_stats = calculate_leaderboard(people, extractions)
 
     for person_stat in people_stats:
         value = person_stat[leaderboard_option["stat_key"]]
@@ -211,6 +175,39 @@ def home():
         selected_leaderboard=leaderboard_option["key"],
         selected_leaderboard_label=leaderboard_option["label"],
         extractions=extraction_stats,
+    )
+
+
+@bp.route("/percentile")
+def percentile():
+    selected_person_id = request.args.get("person_id")
+
+    conn = get_connection()
+
+
+    selected_person = None
+    selected_person_percentile = None
+    selected_person_value = None
+    if selected_person_id:
+        people = get_all_people(conn)
+        extractions = get_all_extractions(conn, people)
+        selected_person = people.get(int(selected_person_id))
+
+        if selected_person is not None:
+            selected_person_percentile = calculate_percentiles(selected_person, extractions)
+            selected_person_value = calculate_stats_for_person(selected_person, extractions)["net_balance"] / 100
+        else:
+            flash("Person not found", "warning")
+
+    people = conn.execute("SELECT id, name FROM people ORDER BY name").fetchall()
+    conn.close()
+
+    return render_template(
+        "percentile.html",
+        people=people,
+        selected_person=selected_person,
+        selected_person_value=selected_person_value,
+        selected_person_percentile=selected_person_percentile,
     )
 
 

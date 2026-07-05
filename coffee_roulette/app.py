@@ -28,4 +28,8 @@ init_db()
 
 def main():
     app = create_app()
+
+    app.logger.setLevel(
+        os.environ.get('LOG_LEVEL', 'WARNING').upper()
+    )
     app.run(debug=True)
