@@ -7,7 +7,10 @@
 
     <!-- Participants -->
     <div class="mb-3">
-        <label class="form-label">Participants</label>
+        <label class="form-label">
+            Participants
+            <span class="text-muted fw-normal" id="participant-count" aria-live="polite">(0 selected)</span>
+        </label>
         <input type="search" class="form-control mb-2" id="participant-search" placeholder="Search people">
         <div class="card p-3">
             {% for p in people %}
@@ -40,6 +43,7 @@
     const participantSearch = document.querySelector('#participant-search');
     const participantRows = document.querySelectorAll('.participant-row');
     const participantCheckboxes = document.querySelectorAll('.participant-checkbox');
+    const participantCount = document.querySelector('#participant-count');
     const winnerRadios = document.querySelectorAll('.winner-radio');
 
     function filterParticipants() {
@@ -54,6 +58,8 @@
         const selectedIds = Array.from(participantCheckboxes)
                                 .filter(cb => cb.checked)
                                 .map(cb => cb.value);
+
+        participantCount.textContent = `(${selectedIds.length} selected)`;
 
         winnerRadios.forEach(radio => {
             if (selectedIds.includes(radio.value)) {
